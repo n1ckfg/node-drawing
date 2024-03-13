@@ -2,30 +2,118 @@
 <html>
 
 	<head>
-		<style>
-			#button {
-				background-color: red;
-				width: 100px;
-				height: 100px;
-				border-radius: 10px;
-			}
-
-			#button:hover {
-				background-color: orange;
-			}
-
-			#button:active {
-				background-color: yellow;
-			}
-		</style>
+		<meta charset="utf-8">
+		<title>...</title>
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:image" content="thumbnail.gif">
+		<link rel="stylesheet" href="./css/main.css">
 		<script src="./js/libraries/socket.io/socket.io.js"></script>			
+		<script src="./js/libraries/p5js/p5.min.js"></script>
 	</head>
 
-	<body>	
-		<div id="button"></div>
-
+	<body>
 		<script>
 			"use strict";
+
+			const sW = 800;
+			const sH = 800;
+			let pg;
+			let isDrawing = false;
+			let currentStroke, strokeCollection;
+
+			function setup() {
+				createCanvas(windowHeight, windowHeight);
+				pg = createGraphics(sW, sH, WEBGL);
+
+				pixelDensity(1);  
+				noCursor();
+				frameRate(60);
+
+				background(0);  
+				pg.strokeWeight(1);
+
+				strokeCollection = new StrokeCollection();
+			}
+
+			function draw() {
+				if (mouseIsPressed && !isDrawing) {
+					isDrawing = true;
+					strokeCollection.addStroke(new Stroke(0, color(255), []));
+					strokeCollection.updateStroke(mouseX, mouseY);
+				} else if (mouseIsPressed && isDrawing) {
+					strokeCollection.updateStroke(mouseX, mouseY);
+				} else if (!mouseIsPressed && isDrawing) {
+					isDrawing = false;
+				}
+
+				strokeCollection.run();
+
+				image(pg, 0, 0, width, height);
+			}
+
+			function windowResized() {
+				resizeCanvas(windowHeight, windowHeight);
+			}
+
+			class Stroke {
+
+				constructor(id, color, points) {
+					this.id = id;
+					this.timestamp = millis();
+					this.color = color;
+					this.points = points;
+				}
+
+				run() {
+					for (let i=0; i<this.points.length; i++) {
+						pg.stroke(this.color);
+						pg.fill(this.color);
+						pg.beginShape(LINES);
+						pg.vertex(this.points[i].x, this.points[i].y);
+						pg.endShape();
+						pg.ellipse(this.points[i].x, this.points[i].y, 10, 10);
+					}
+				}
+
+				addPoint(x, y) {
+					x -= width/2;
+					y -= height/2;
+					this.points.push(createVector(x, y));
+				}
+
+			}
+
+			class StrokeCollection {
+
+				constructor() {
+					this.strokes = [];
+					this.lifetime = 2000;
+				}
+
+				run() {
+					for (let i=0; i<this.strokes.length; i++) {
+						this.strokes[i].run();
+					}
+				}
+
+				addStroke(stroke) {
+					this.strokes.push(stroke);
+				}
+
+				updateStroke(x, y) {
+					this.strokes[this.strokes.length - 1].addPoint(x, y);
+				}
+
+				removeStroke(id) {
+					const t = millis();
+					for (let i=0; i<strokes.length; i++) {
+						if (strokes[i].id === id || t > strokes[i].timestamp + this.lifetime) {
+							strokes.splice(i, 1);
+						}
+					}
+				}
+
+			}
 
 			const socket = io();
 
@@ -33,11 +121,11 @@
 				console.log("Received message from server: " + data);
 			});
 
-			const button = document.getElementById("button");
-			button.addEventListener("click", function() {
-				socket.emit("ClientMessageExample", "Hello from client");
-			});
-		</script>	
+			//const button = document.getElementById("button");
+			//button.addEventListener("click", function() {
+				//socket.emit("ClientMessageExample", "Hello from client");
+			//});
+		</script>
 	</body>
 
 </html>
