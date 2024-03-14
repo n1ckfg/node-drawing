@@ -43,8 +43,8 @@
 				return [r, g, b];
 			}
 
-			const clientId = generateUUID();
-			const clientColor = generateColor();
+			const sessionId = generateUUID();
+			const sessionColor = generateColor();
 
 			function setup() {
 				createCanvas(windowHeight, windowHeight);
@@ -64,11 +64,11 @@
 			socket.on("strokeFromServer", function(data) {			
 				try {
 					const stroke = JSON.parse(data);
-					const isNewStroke = !localStrokes.checkId(stroke.id);
-					console.log("Received stroke from server: " + stroke.id + ", new: " + isNewStroke);
+					const isNewStroke = !localStrokes.checkSessionId(stroke.sessionId);
+					console.log("Received stroke from server: " + stroke.sessionId + ", new: " + isNewStroke);
 
 					if (isNewStroke) {
-						remoteStrokes.addStroke(new Stroke(stroke.id, stroke.color, stroke.points));
+						remoteStrokes.addStroke(new Stroke(stroke.sessionId, stroke.strokeId, stroke.color, stroke.points));
 					}
 				} catch (error) {
 					console.error(error);
@@ -81,7 +81,7 @@
 
 				if (mouseIsPressed && !isDrawing) {
 					isDrawing = true;
-					localStrokes.addStroke(new Stroke(clientId, clientColor, []));
+					localStrokes.addStroke(new Stroke(sessionId, generateUUID(), sessionColor, []));
 					localStrokes.updateStroke(mouseX, mouseY);
 				} else if (mouseIsPressed && isDrawing) {
 					localStrokes.updateStroke(mouseX, mouseY);
@@ -107,8 +107,9 @@
 
 			class Stroke {
 
-				constructor(id, color, points) {
-					this.id = id;
+				constructor(sessionId, strokeId, color, points) {
+					this.sessionId = sessionId;
+					this.strokeId = strokeId;
 					this.timestamp = millis();
 					this.color = color;
 					this.points = points;
@@ -168,17 +169,17 @@
 					return this.strokes[this.strokes.length - 1];
 				}
 
-				removeStroke(id) {
+				removeStroke(strokeId) {
 					for (let i=0; i<this.strokes.length; i++) {
-						if (this.strokes[i].id === id) {
+						if (this.strokes[i].strokeId === strokeId) {
 							this.strokes.splice(i, 1);
 						}
 					}
 				}
 
-				checkId(id) {
+				checkSessionId(sessionId) {
 					for (let i=0; i<this.strokes.length; i++) {
-						if (this.strokes[i].id === id) {
+						if (this.strokes[i].sessionId === sessionId) {
 							return true;
 						}
 					}

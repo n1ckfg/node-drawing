@@ -99,17 +99,45 @@ app.post("/redeploy", onWebhook);
 
 
 // ~ ~ ~ ~ ~ ~  2. OPERATIONS   ~ ~ ~ ~ ~ ~
+let strokes = [];
+
 io.on("connection", function(socket) {
     console.log("A socket.io user connected.");
+    
+    for (let i=0; i<strokes.length; i++) {
+        io.emit("strokeFromServer", JSON.stringify(strokes[i]));
+    }
 
     socket.on("disconnect", function(event) {
         console.log("A socket.io user disconnected.");
     });
 
     socket.on("strokeFromClient", function(data) {
-        console.log("Received client message.");
+        let obj = JSON.parse(data);
+        const t = performance.now();
+        console.log("Received message from " + obj.sessionId + " at " + t);
 
-        io.emit("strokeFromServer", data);
+        obj.timestamp = t;
+        strokes.push(obj);
+
+        io.emit("strokeFromServer", JSON.stringify(obj));
     });
 });
 
+const loopInterval = 5000; 
+const lifetime = 200000;
+
+setInterval(function() { // This will repeat at the given interval in ms.
+    const t = performance.now();
+
+    let numberDeleted = 0;
+
+    for (let i=0; i<strokes.length; i++) {
+        if (t > strokes[i].timestamp + lifetime) {
+            strokes.splice(i, 1);
+            numberDeleted++;
+        }
+    }
+
+    console.log("Storing " + strokes.length + " strokes, " + numberDeleted + " deleted.");
+}, loopInterval);
