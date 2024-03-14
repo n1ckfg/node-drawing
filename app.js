@@ -125,7 +125,7 @@ io.on("connection", function(socket) {
 });
 
 const loopInterval = 5000; 
-const lifetime = 200000;
+const lifetime = 600000;
 
 setInterval(function() { // This will repeat at the given interval in ms.
     const t = performance.now();
