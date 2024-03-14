@@ -95,8 +95,8 @@
 					}	
 				}
 
-				localStrokes.run();
 				remoteStrokes.run();
+				localStrokes.run(); // local will always draw on top
 
 				image(pg, 0, 0, width, height);
 			}
