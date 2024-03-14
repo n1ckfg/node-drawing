@@ -15,6 +15,8 @@
 		<script>
 			"use strict";
 
+			const socket = io();
+
 			const sW = 800;
 			const sH = 800;
 			let pg;
@@ -22,12 +24,34 @@
 			let currentStroke, localStrokes, remoteStrokes;
 			const lifetime = 10000;
 
+			function generateUUID() {
+				return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+					let r = Math.random() * 16 | 0,
+					v = c == 'x' ? r : (r & 0x3 | 0x8);
+					return v.toString(16);
+				});
+			}
+
+			function getRandom(min, max) {
+				return Math.floor(Math.random() * (max - min + 1)) + min;
+			}
+
+			function generateColor() {
+				let r = getRandom(0, 127) + 127;
+				let g = getRandom(0, 127) + 127;
+				let b = getRandom(0, 127) + 127;
+				return [r, g, b];
+			}
+
+			const clientId = generateUUID();
+			const clientColor = generateColor();
+
 			function setup() {
 				createCanvas(windowHeight, windowHeight);
 				pg = createGraphics(sW, sH, WEBGL);
 
 				pixelDensity(1);  
-				noCursor();
+				//noCursor();
 				frameRate(60);
 
 				background(0);  
@@ -37,18 +61,38 @@
 				remoteStrokes = new StrokeCollection(lifetime);
 			}
 
+			socket.on("strokeFromServer", function(data) {			
+				try {
+					const stroke = JSON.parse(data);
+					const isNewStroke = !localStrokes.checkId(stroke.id);
+					console.log("Received stroke from server: " + stroke.id + ", new: " + isNewStroke);
+
+					if (isNewStroke) {
+						remoteStrokes.addStroke(stroke);
+					}
+				} catch (error) {
+					console.error(error);
+				}		
+			});
+
 			function draw() {
 				background(0);
 				pg.background(0);
 
 				if (mouseIsPressed && !isDrawing) {
 					isDrawing = true;
-					localStrokes.addStroke(new Stroke(0, color(255), []));
+					localStrokes.addStroke(new Stroke(clientId, clientColor, []));
 					localStrokes.updateStroke(mouseX, mouseY);
 				} else if (mouseIsPressed && isDrawing) {
 					localStrokes.updateStroke(mouseX, mouseY);
 				} else if (!mouseIsPressed && isDrawing) {
 					isDrawing = false;
+					try {
+						const json = JSON.stringify(localStrokes.getLastStroke());
+						socket.emit("strokeFromClient", json);
+					} catch (error) {
+						console.error(error);
+					}	
 				}
 
 				localStrokes.run();
@@ -82,10 +126,14 @@
 					pg.endShape();
 				}
 
+				fixCoordinates(x, y) {
+					x = map(x, -width/2, width/2, -sW, 0);
+					y = map(y, -height/2, height/2, -sH, 0);
+					return createVector(x, y);
+				}
+
 				addPoint(x, y) {
-					x -= width/2;
-					y -= height/2;
-					this.points.push(createVector(x, y));
+					this.points.push(this.fixCoordinates(x, y));
 				}
 
 			}
@@ -99,7 +147,6 @@
 
 				run() {
 					const t = millis();
-
 					for (let i=0; i<this.strokes.length; i++) {
 						this.strokes[i].run();
 
@@ -117,6 +164,10 @@
 					this.strokes[this.strokes.length - 1].addPoint(x, y);
 				}
 
+				getLastStroke() {
+					return this.strokes[this.strokes.length - 1];
+				}
+
 				removeStroke(id) {
 					for (let i=0; i<this.strokes.length; i++) {
 						if (this.strokes[i].id === id) {
@@ -125,18 +176,16 @@
 					}
 				}
 
+				checkId(id) {
+					for (let i=0; i<this.strokes.length; i++) {
+						if (this.strokes[i].id === id) {
+							return true;
+						}
+					}
+					return false;					
+				}
+
 			}
-
-			const socket = io();
-
-			socket.on("ServerMessageExample", function(data) {
-				console.log("Received message from server: " + data);
-			});
-
-			//const button = document.getElementById("button");
-			//button.addEventListener("click", function() {
-				//socket.emit("ClientMessageExample", "Hello from client");
-			//});
 		</script>
 	</body>
 

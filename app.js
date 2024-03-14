@@ -99,9 +99,6 @@ app.post("/redeploy", onWebhook);
 
 
 // ~ ~ ~ ~ ~ ~  2. OPERATIONS   ~ ~ ~ ~ ~ ~
-// Here is where you'll typically make customizations.
-
-// 2.1. Example instructions for receiving messages:
 io.on("connection", function(socket) {
     console.log("A socket.io user connected.");
 
@@ -109,14 +106,10 @@ io.on("connection", function(socket) {
         console.log("A socket.io user disconnected.");
     });
 
-    socket.on("ClientMessageExample", function(data) {
+    socket.on("strokeFromClient", function(data) {
         console.log("Received client message: " + data);
+
+        io.emit("strokeFromServer", data);
     });
 });
 
-// 2.2. Example instructions for sending messages:
-const loopInterval = 5000; 
-
-setInterval(function() { // This will repeat at the given interval in ms.
-    io.emit("ServerMessageExample", "Hello from server.");
-}, loopInterval);
