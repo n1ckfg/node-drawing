@@ -22,7 +22,7 @@
 			let pg;
 			let isDrawing = false;
 			let currentStroke, localStrokes, remoteStrokes;
-			const lifetime = 600000;
+			const newStrokeLifespan = 600000;
 
 			function generateUUID() {
 				return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -57,8 +57,8 @@
 				background(0);  
 				pg.strokeWeight(4);
 
-				localStrokes = new StrokeCollection(lifetime);
-				remoteStrokes = new StrokeCollection(lifetime);
+				localStrokes = new StrokeCollection();
+				remoteStrokes = new StrokeCollection();
 			}
 
 			socket.on("strokeFromServer", function(data) {			
@@ -68,7 +68,7 @@
 					console.log("Received stroke from server: " + stroke.sessionId + ", new: " + isNewStroke);
 
 					if (isNewStroke) {
-						remoteStrokes.addStroke(new Stroke(stroke.sessionId, stroke.strokeId, stroke.color, stroke.points));
+						remoteStrokes.addStroke(new Stroke(stroke.sessionId, stroke.strokeId, stroke.lifespan, stroke.color, stroke.points));
 					}
 				} catch (error) {
 					console.error(error);
@@ -81,15 +81,15 @@
 
 				if (mouseIsPressed && !isDrawing) {
 					isDrawing = true;
-					localStrokes.addStroke(new Stroke(sessionId, generateUUID(), sessionColor, []));
+					localStrokes.addStroke(new Stroke(sessionId, generateUUID(), newStrokeLifespan, sessionColor, []));
 					localStrokes.updateStroke(mouseX, mouseY);
 				} else if (mouseIsPressed && isDrawing) {
 					localStrokes.updateStroke(mouseX, mouseY);
 				} else if (!mouseIsPressed && isDrawing) {
 					isDrawing = false;
 					try {
-						const json = JSON.stringify(localStrokes.getLastStroke());
-						socket.emit("strokeFromClient", json);
+						let stroke = localStrokes.getLastStrokeClone();
+						socket.emit("strokeFromClient", JSON.stringify(stroke));
 					} catch (error) {
 						console.error(error);
 					}	
@@ -107,10 +107,11 @@
 
 			class Stroke {
 
-				constructor(sessionId, strokeId, color, points) {
+				constructor(sessionId, strokeId, lifespan, color, points) {
 					this.sessionId = sessionId;
 					this.strokeId = strokeId;
 					this.timestamp = millis();
+					this.lifespan = lifespan;
 					this.color = color;
 					this.points = points;
 				}
@@ -137,21 +138,24 @@
 					this.points.push(this.fixCoordinates(x, y));
 				}
 
+				updateLifespan() {
+					this.lifespan = constrain(this.lifespan - (millis() - this.timestamp), 100, Infinity);
+				}
+
 			}
 
 			class StrokeCollection {
 
-				constructor(lifetime) {
+				constructor() {
 					this.strokes = [];
-					this.lifetime = lifetime;
 				}
 
 				run() {
-					const t = millis();
+					const t = millis()
 					for (let i=0; i<this.strokes.length; i++) {
 						this.strokes[i].run();
 
-						if (t > this.strokes[i].timestamp + this.lifetime) {
+						if (t > this.strokes[i].timestamp + this.strokes[i].lifespan) {
 							this.strokes.splice(i, 1);
 						}
 					}
@@ -167,6 +171,10 @@
 
 				getLastStroke() {
 					return this.strokes[this.strokes.length - 1];
+				}
+
+				getLastStrokeClone() {
+					return this.strokes.find((obj, i) => i === this.strokes.length - 1);				
 				}
 
 				removeStroke(strokeId) {

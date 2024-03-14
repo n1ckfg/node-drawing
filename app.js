@@ -113,19 +113,18 @@ io.on("connection", function(socket) {
     });
 
     socket.on("strokeFromClient", function(data) {
-        let obj = JSON.parse(data);
+        let stroke = JSON.parse(data);
         const t = performance.now();
-        console.log("Received message from " + obj.sessionId + " at " + t);
+        console.log("Received message from " + stroke.sessionId + " at " + t);
 
-        obj.timestamp = t;
-        strokes.push(obj);
+        stroke.timestamp = t;
+        strokes.push(stroke);
 
-        io.emit("strokeFromServer", JSON.stringify(obj));
+        io.emit("strokeFromServer", JSON.stringify(stroke));
     });
 });
 
-const loopInterval = 5000; 
-const lifetime = 600000;
+const clockInterval = 5000; 
 
 setInterval(function() { // This will repeat at the given interval in ms.
     const t = performance.now();
@@ -133,11 +132,11 @@ setInterval(function() { // This will repeat at the given interval in ms.
     let numberDeleted = 0;
 
     for (let i=0; i<strokes.length; i++) {
-        if (t > strokes[i].timestamp + lifetime) {
+        if (t > strokes[i].timestamp + strokes[i].lifespan) {
             strokes.splice(i, 1);
             numberDeleted++;
         }
     }
 
     console.log("Storing " + strokes.length + " strokes, " + numberDeleted + " deleted.");
-}, loopInterval);
+}, clockInterval);
