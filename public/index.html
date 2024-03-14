@@ -19,7 +19,8 @@
 			const sH = 800;
 			let pg;
 			let isDrawing = false;
-			let currentStroke, strokeCollection;
+			let currentStroke, localStrokes, remoteStrokes;
+			const lifetime = 10000;
 
 			function setup() {
 				createCanvas(windowHeight, windowHeight);
@@ -30,23 +31,28 @@
 				frameRate(60);
 
 				background(0);  
-				pg.strokeWeight(1);
+				pg.strokeWeight(4);
 
-				strokeCollection = new StrokeCollection();
+				localStrokes = new StrokeCollection(lifetime);
+				remoteStrokes = new StrokeCollection(lifetime);
 			}
 
 			function draw() {
+				background(0);
+				pg.background(0);
+
 				if (mouseIsPressed && !isDrawing) {
 					isDrawing = true;
-					strokeCollection.addStroke(new Stroke(0, color(255), []));
-					strokeCollection.updateStroke(mouseX, mouseY);
+					localStrokes.addStroke(new Stroke(0, color(255), []));
+					localStrokes.updateStroke(mouseX, mouseY);
 				} else if (mouseIsPressed && isDrawing) {
-					strokeCollection.updateStroke(mouseX, mouseY);
+					localStrokes.updateStroke(mouseX, mouseY);
 				} else if (!mouseIsPressed && isDrawing) {
 					isDrawing = false;
 				}
 
-				strokeCollection.run();
+				localStrokes.run();
+				remoteStrokes.run();
 
 				image(pg, 0, 0, width, height);
 			}
@@ -65,14 +71,15 @@
 				}
 
 				run() {
+					pg.stroke(this.color);
+					pg.noFill();
+					pg.beginShape(LINE_STRIP);
+
 					for (let i=0; i<this.points.length; i++) {
-						pg.stroke(this.color);
-						pg.fill(this.color);
-						pg.beginShape(LINES);
 						pg.vertex(this.points[i].x, this.points[i].y);
-						pg.endShape();
-						pg.ellipse(this.points[i].x, this.points[i].y, 10, 10);
 					}
+
+					pg.endShape();
 				}
 
 				addPoint(x, y) {
@@ -85,14 +92,20 @@
 
 			class StrokeCollection {
 
-				constructor() {
+				constructor(lifetime) {
 					this.strokes = [];
-					this.lifetime = 2000;
+					this.lifetime = lifetime;
 				}
 
 				run() {
+					const t = millis();
+
 					for (let i=0; i<this.strokes.length; i++) {
 						this.strokes[i].run();
+
+						if (t > this.strokes[i].timestamp + this.lifetime) {
+							this.strokes.splice(i, 1);
+						}
 					}
 				}
 
@@ -105,10 +118,9 @@
 				}
 
 				removeStroke(id) {
-					const t = millis();
-					for (let i=0; i<strokes.length; i++) {
-						if (strokes[i].id === id || t > strokes[i].timestamp + this.lifetime) {
-							strokes.splice(i, 1);
+					for (let i=0; i<this.strokes.length; i++) {
+						if (this.strokes[i].id === id) {
+							this.strokes.splice(i, 1);
 						}
 					}
 				}
