@@ -29,7 +29,18 @@ let io, http, https;
 
 // Part of the setup complexity here is needed to make the app work both
 // on a local machine, and in a real deployment.
-if (!debug) {
+if (debug) {
+    http = require("http").Server(app);
+
+    io = require("socket.io")(http, { 
+        pingInterval: ping_interval,
+        pingTimeout: ping_timeout
+    });
+
+    http.listen(port_http, function() {
+        console.log("\nNode.js listening on http port " + port_http);
+    });
+} else {
     http = require("http");
 
     http.createServer(function(req, res) {
@@ -52,18 +63,7 @@ if (!debug) {
     https.listen(port_https, function() {
         console.log("\nNode.js listening on https port " + port_https);
     });
-} else {
-    http = require("http").Server(app);
-
-    io = require("socket.io")(http, { 
-        pingInterval: ping_interval,
-        pingTimeout: ping_timeout
-    });
-
-    http.listen(port_http, function() {
-        console.log("\nNode.js listening on http port " + port_http);
-    });
-}
+} 
 
 // 1.4. Serve the client site.
 const PUBLIC_PATH = path.join(__dirname, "public"); // This is where the client site will be served from
