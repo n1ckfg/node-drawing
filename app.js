@@ -107,7 +107,7 @@ io.on("connection", function(socket) {
     });
 
     socket.on("strokeFromClient", function(data) {
-        console.log("Received client message: " + data);
+        console.log("Received client message.");
 
         io.emit("strokeFromServer", data);
     });

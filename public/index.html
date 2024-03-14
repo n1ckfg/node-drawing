@@ -22,7 +22,7 @@
 			let pg;
 			let isDrawing = false;
 			let currentStroke, localStrokes, remoteStrokes;
-			const lifetime = 10000;
+			const lifetime = 100000;
 
 			function generateUUID() {
 				return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -68,7 +68,7 @@
 					console.log("Received stroke from server: " + stroke.id + ", new: " + isNewStroke);
 
 					if (isNewStroke) {
-						remoteStrokes.addStroke(stroke);
+						remoteStrokes.addStroke(new Stroke(stroke.id, stroke.color, stroke.points));
 					}
 				} catch (error) {
 					console.error(error);
