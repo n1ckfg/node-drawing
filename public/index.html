@@ -88,7 +88,7 @@
 				} else if (!mouseIsPressed && isDrawing) {
 					isDrawing = false;
 					try {
-						let stroke = localStrokes.getLastStrokeClone();
+						let stroke = localStrokes.getLastStroke();
 						socket.emit("strokeFromClient", JSON.stringify(stroke));
 					} catch (error) {
 						console.error(error);
@@ -138,9 +138,11 @@
 					this.points.push(this.fixCoordinates(x, y));
 				}
 
+				/*
 				updateLifespan() {
 					this.lifespan = constrain(this.lifespan - (millis() - this.timestamp), 100, Infinity);
 				}
+				*/
 
 			}
 
@@ -173,9 +175,11 @@
 					return this.strokes[this.strokes.length - 1];
 				}
 
+				/*
 				getLastStrokeClone() {
 					return this.strokes.find((obj, i) => i === this.strokes.length - 1);				
 				}
+				*/
 
 				removeStroke(strokeId) {
 					for (let i=0; i<this.strokes.length; i++) {
