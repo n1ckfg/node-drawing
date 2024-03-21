@@ -1,4 +1,4 @@
-node-template
+node-drawing
 Copyright (c) 2024 Nick Fox-Gieg
 https://fox-gieg.com
 
